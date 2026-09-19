@@ -4,3 +4,5 @@ export const usersTable = pgTable("planets", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   name: varchar({ length: 255 }).notNull(),
 });
+
+export * from "./auth";

@@ -1,14 +1,14 @@
 import { usersTable } from "@/db/schema";
 import { db } from "@/lib/db";
-import { os } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import * as z from "zod";
+import { oAuthed, oBase } from "./builders";
 
-export const listPlanets = os.handler(async () => {
+export const listPlanets = oBase.handler(async () => {
   return db.select().from(usersTable);
 });
 
-export const findPlanet = os
+export const findPlanet = oBase
   .input(z.object({ id: z.number() }))
   .handler(async ({ input }) => {
     const [planet] = await db
@@ -18,9 +18,13 @@ export const findPlanet = os
     return planet;
   });
 
-export const createPlanet = os
+export const createPlanet = oAuthed
   .input(z.object({ name: z.string() }))
-  .handler(async ({ input }) => {
+  .handler(async ({ input, context }) => {
+    if (context) {
+      console.log("createPlanet ctx:\n", JSON.stringify(context, null, 2));
+    }
+
     const [planet] = await db
       .insert(usersTable)
       .values({ name: input.name })

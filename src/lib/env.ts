@@ -12,6 +12,7 @@ export const zEnv = z.object({
     .transform((v) => v || undefined),
   DB_DB: z.string().default("postgres"),
   DB_SSL: z.boolean().default(false),
+  AUTH_SECRET: z.string(),
 });
 // .extend(zRedisConfig.shape);
 
