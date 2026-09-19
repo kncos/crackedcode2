@@ -9,18 +9,29 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@orpc/client": "^2.0.0-beta.37",
+    "@orpc/next": "^1.14.11",
+    "@orpc/server": "^2.0.0-beta.37",
+    "cracked-judge": "^0.0.1",
+    "dotenv": "^18.0.1",
+    "drizzle-orm": "^1.0.0-rc.4",
     "next": "16.3.5",
+    "pg": "^8.23.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^1.0.0-rc.4",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   },
   "packageManager": "bun@1.4.2",
