@@ -35,7 +35,7 @@ export const PRIMITIVE_TYPES = [
   "char",
   "string",
 ] as const;
-export type PRIMITIVE_TYPE = (typeof PRIMITIVE_TYPES)[number];
+export type ZN_PRIMITIVE_TYPE = (typeof PRIMITIVE_TYPES)[number];
 export const UNARY_TYPES = [
   "array",
   "nullable",
@@ -116,7 +116,7 @@ export type ZN_NONPRIMITIVE_LIKE = ZN_NODE_LIKE & {
 
 export const isPrimitive = (
   input: unknown,
-): input is ZN_NODE_LIKE & { _inner: never; _type: PRIMITIVE_TYPE } =>
+): input is ZN_NODE_LIKE & { _inner: never; _type: ZN_PRIMITIVE_TYPE } =>
   zn.safeParse(input).success &&
   PRIMITIVE_TYPES.findIndex((v) => v === (input as ZN_NODE_LIKE)._type) !== -1;
 

@@ -1,6 +1,6 @@
-import { CONTAINER_TYPE, PRIMITIVE_TYPE } from "../../nodes";
+import { CONTAINER_TYPE, ZN_PRIMITIVE_TYPE } from "../../nodes";
 
-export const cppPrimitiveMap: Record<PRIMITIVE_TYPE, string> = {
+export const cppPrimitiveMap: Record<ZN_PRIMITIVE_TYPE, string> = {
   i8: "int8_t",
   i16: "int16_t",
   i32: "int32_t",
