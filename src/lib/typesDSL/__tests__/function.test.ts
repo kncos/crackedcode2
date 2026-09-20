@@ -27,11 +27,11 @@ describe("builtin function zod", () => {
     const { zData } = languageResolvers.zod(graph.getNode("add")!, new Map());
 
     // z.never() rejects every value
-    expect(zData.safeParse(0).success).toBe(true);
-    expect(zData.safeParse("").success).toBe(true);
-    expect(zData.safeParse(null).success).toBe(true);
-    expect(zData.safeParse(undefined).success).toBe(true);
-    expect(zData.safeParse({}).success).toBe(true);
+    expect(zData.safeParse(0).success).toBe(false);
+    expect(zData.safeParse("").success).toBe(false);
+    expect(zData.safeParse(null).success).toBe(false);
+    expect(zData.safeParse(undefined).success).toBe(false);
+    expect(zData.safeParse({}).success).toBe(false);
   });
 
   test("function with no params and no return type", () => {
@@ -46,8 +46,7 @@ describe("builtin function zod", () => {
     const { languageResolvers, getAllTypesZodSchema } = getBuiltinRegistry();
     const graph = parseSchema({ input, types: getAllTypesZodSchema() });
     const { zData } = languageResolvers.zod(graph.getNode("noop")!, new Map());
-
-    expect(zData.safeParse(undefined).success).toBe(true);
+    expect(zData.safeParse(undefined).success).toBe(false);
   });
 
   test("function is registered in refmap under its name", () => {
@@ -70,7 +69,7 @@ describe("builtin function zod", () => {
     assert.isTrue(refmap.has("greet"), "function name should be in refmap");
     // The stored schema should also be z.never()
     const stored = refmap.get("greet")!;
-    expect(stored.safeParse("anything").success).toBe(true);
+    expect(stored.safeParse("anything").success).toBe(false);
   });
 
   test("named param/return types are expanded into refmap during resolution", () => {
@@ -108,10 +107,10 @@ describe("builtin function zod", () => {
     // Verify the stored schemas are correct
     const inputSchema = refmap.get("InputValue")!;
     assert.isTrue(inputSchema.safeParse(0).success);
-    expect(inputSchema.safeParse("not an int").success).toBe(true);
+    expect(inputSchema.safeParse("not an int").success).toBe(false);
 
     const outputSchema = refmap.get("OutputValue")!;
     assert.isTrue(outputSchema.safeParse("result").success);
-    expect(outputSchema.safeParse(42).success).toBe(true);
+    expect(outputSchema.safeParse(42).success).toBe(false);
   });
 });

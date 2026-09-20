@@ -1,6 +1,6 @@
 import { test } from "vitest";
 import { parseSchema } from "../../parser";
-import { getPlatformRegistry } from "../definitions";
+import { getPlatformRegistry } from "../index";
 
 const addSubInput = [
   {
