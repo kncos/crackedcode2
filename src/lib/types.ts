@@ -7,4 +7,7 @@ export const zSessionUser = zUser.omit({
 });
 
 export const USER_ROLES = ["none", "paid", "admin"] as const;
-export type USER_ROLE = (typeof USER_ROLES)[number];
+export type UserRole = (typeof USER_ROLES)[number];
+
+export const SUPPORTED_LANGS = ["cpp", "python"] as const;
+export type SupportedLang = (typeof SUPPORTED_LANGS)[number];

@@ -14,3 +14,18 @@ export const problems = pgTable("problems", {
   abi: jsonb("abi").$type<z.infer<typeof znEntry>>(),
   testCases: jsonb("test_cases"),
 });
+
+export const problemListItemSelect = {
+  id: problems.id,
+  createdAt: problems.createdAt,
+  updatedAt: problems.updatedAt,
+  title: problems.title,
+  difficulty: problems.difficulty,
+  categories: problems.categories,
+} as const;
+
+export const problemDetailSelect = {
+  ...problemListItemSelect,
+  description: problems.description,
+  editorial: problems.editorial,
+} as const;

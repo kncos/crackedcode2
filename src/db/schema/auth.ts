@@ -1,4 +1,4 @@
-import { USER_ROLE } from "@/lib/types";
+import { UserRole } from "@/lib/types";
 import type { AdapterAccountType } from "@auth/core/adapters";
 import {
   boolean,
@@ -15,7 +15,7 @@ export const users = pgTable("user", {
   ...idColumn,
   ...timestamps,
   name: text("name").unique(),
-  role: text("role").$type<USER_ROLE>().notNull().default("none"),
+  role: text("role").$type<UserRole>().notNull().default("none"),
   passwordHash: text("password_hash").unique(),
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
