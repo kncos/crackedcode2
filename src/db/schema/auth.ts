@@ -16,7 +16,7 @@ export const users = pgTable("user", {
   ...timestamps,
   name: text("name").unique(),
   role: text("role").$type<USER_ROLE>().notNull().default("none"),
-  passwordHash: text("password_hash").notNull().unique(),
+  passwordHash: text("password_hash").unique(),
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
@@ -40,11 +40,9 @@ export const accounts = pgTable(
     session_state: text("session_state"),
   },
   (account) => [
-    {
-      compoundKey: primaryKey({
-        columns: [account.provider, account.providerAccountId],
-      }),
-    },
+    primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
   ],
 );
 
@@ -64,11 +62,9 @@ export const verificationTokens = pgTable(
     expires: timestamp("expires", { mode: "date" }).notNull(),
   },
   (verificationToken) => [
-    {
-      compositePk: primaryKey({
-        columns: [verificationToken.identifier, verificationToken.token],
-      }),
-    },
+    primaryKey({
+      columns: [verificationToken.identifier, verificationToken.token],
+    }),
   ],
 );
 
@@ -87,10 +83,8 @@ export const authenticators = pgTable(
     transports: text("transports"),
   },
   (authenticator) => [
-    {
-      compositePK: primaryKey({
-        columns: [authenticator.userId, authenticator.credentialID],
-      }),
-    },
+    primaryKey({
+      columns: [authenticator.userId, authenticator.credentialID],
+    }),
   ],
 );
