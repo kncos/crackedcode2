@@ -1,22 +1,20 @@
+import { USER_ROLE } from "@/lib/types";
 import type { AdapterAccountType } from "@auth/core/adapters";
 import {
   boolean,
   integer,
-  pgEnum,
   pgTable,
   primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-
-export const rolesEnum = pgEnum("roles", ["none", "paid", "admin"]);
+import { idColumn, timestamps } from "./columns";
 
 export const users = pgTable("user", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+  ...idColumn,
+  ...timestamps,
   name: text("name").unique(),
-  role: rolesEnum().notNull().default("none"),
+  role: text("role").$type<USER_ROLE>().notNull().default("none"),
   passwordHash: text("password_hash").notNull().unique(),
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),

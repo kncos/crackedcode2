@@ -1,4 +1,4 @@
-import { users } from "@/db/auth";
+import { users } from "@/db/schema/auth";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { USER_ROLE, zSessionUser } from "@/lib/types";
