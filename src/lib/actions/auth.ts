@@ -1,8 +1,8 @@
 "use server";
 
+import { db } from "@/db";
 import { users } from "@/db/schema";
 import { signIn, signOut } from "@/lib/auth";
-import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { AuthError } from "next-auth";
