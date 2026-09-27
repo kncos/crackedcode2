@@ -21,6 +21,13 @@ const znFunctionInner = z.object({
   _out: znInnerNode.optional(),
 });
 
+export const znEntry = z.looseObject({
+  _type: z.literal("entry"),
+  _inner: znArrayInner,
+  _name: z.string().nonempty().optional().default("entry"),
+  _desc: z.string().optional(),
+});
+
 export const PRIMITIVE_TYPES = [
   "i8",
   "i16",
@@ -92,9 +99,10 @@ export const zn = z.discriminatedUnion("_type", [
   z.object({
     _type: z.enum(IO_TYPES),
     _name: z.string().nonempty(),
-    _desc: z.string().nonempty(),
+    _desc: z.string().optional(),
     _inner: znFunctionInner,
   }),
+  znEntry,
 ]);
 
 export type ZN_TYPE = z.infer<typeof zn>["_type"];

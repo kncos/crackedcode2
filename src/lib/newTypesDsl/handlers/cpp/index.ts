@@ -1,9 +1,10 @@
 import { CrackedError, indentStr } from "cracked-lib";
 import z from "zod";
-import { NodeHandlerResult } from "..";
+import { NodeHandlerResult, produceCode } from "..";
 import {
   collectInnerNodes,
   CONTAINER_TYPE,
+  hasArrayInner,
   hasFunctionInner,
   isContainer,
   isPrimitive,
@@ -12,7 +13,6 @@ import {
   ZN_LIKE,
 } from "../../nodes";
 import { TypeGraph } from "../../typegraph";
-import { applySlashComment } from "../../utils";
 import { cppContainerMap, cppPrimitiveMap } from "./records";
 
 const cppHandleNode = (input: ZN_LIKE): NodeHandlerResult => {
@@ -22,8 +22,7 @@ const cppHandleNode = (input: ZN_LIKE): NodeHandlerResult => {
     const typeName = cppPrimitiveMap[input._type];
     return {
       typeRef: input._name ?? `${typeName}`,
-      typeDef: input._name ? `using ${input._name} = ${typeName};` : undefined,
-      doc: applySlashComment(input._desc),
+      emit: input._name ? `using ${input._name} = ${typeName};` : undefined,
     };
   } else if (isContainer(input)) {
     const inner = collectInnerNodes(input)
@@ -33,9 +32,7 @@ const cppHandleNode = (input: ZN_LIKE): NodeHandlerResult => {
     const actualType = cppContainerMap[input._type as CONTAINER_TYPE](inner);
     return {
       typeRef: input._name ?? actualType,
-      typeDef: input._name
-        ? `using ${input._name} = ${actualType};`
-        : undefined,
+      emit: input._name ? `using ${input._name} = ${actualType};` : undefined,
     };
   } else if (input._type === "object") {
     const entries = Object.entries(input._inner as object).map(
@@ -46,7 +43,7 @@ const cppHandleNode = (input: ZN_LIKE): NodeHandlerResult => {
     );
     return {
       typeRef: input._name!,
-      typeDef: [
+      emit: [
         `struct ${input._name} {`,
         ...entries.map(({ propName, ref }) => indentStr(`${ref} ${propName};`)),
         `};`,
@@ -56,21 +53,53 @@ const cppHandleNode = (input: ZN_LIKE): NodeHandlerResult => {
     // mainly just for linting
     if (!hasFunctionInner(input)) {
       throw new CrackedError("PARSE_ERROR", {
-        message: "espected function inner",
+        message: "espected function inner on function type node",
       });
     }
 
     const { _in, _out } = input._inner;
     const params = Object.entries(_in ?? {})
-      .map(([name, node]) => `${name}: ${cppHandleNode(node).typeRef}`)
+      .map(([name, node]) => `${cppHandleNode(node).typeRef} ${name}`)
       .join(", ");
-    const returnType = _out ? cppHandleNode(_out) : "void";
+    const paramNames = Object.keys(_in ?? {}).join(", ");
+    const returnType = _out ? cppHandleNode(_out).typeRef : "void";
     const signature = `${returnType} ${input._name!}(${params})`;
 
     return {
       typeRef: input._name!,
-      dec: `${signature};`,
-      impl: `${signature} {\n\n}`,
+      driver_emit: `${signature};`,
+      user_emit: `${signature} {\n\n}`,
+      driver_internal:
+        `static ${signature} {\n` +
+        `  return ::${input._name!}(${paramNames});\n` +
+        `}\n`,
+    };
+  } else if (input._type === "entry") {
+    if (!hasArrayInner(input)) {
+      throw new CrackedError("PARSE_ERROR", {
+        message: "expected array inner on entry type node",
+      });
+    }
+
+    const driver_impls = input._inner
+      .map(cppHandleNode)
+      .map((n) => n.driver_internal)
+      .filter((v) => v !== undefined);
+
+    const ops_name = "Operations";
+
+    const ops =
+      `struct ${ops_name} {\n` + indentStr(driver_impls.join("\n")) + "\n};\n";
+    const body = [
+      `bool driver(std::string_view json) {`,
+      `  bool success = test_runner::run<${ops_name}>(json);`,
+      `  return success;`,
+      `}`,
+    ].join("\n");
+
+    return {
+      typeRef: "// SHOULD NOT SEE THIS",
+      driver_emit: ops + body,
     };
   }
 
@@ -79,15 +108,21 @@ const cppHandleNode = (input: ZN_LIKE): NodeHandlerResult => {
   });
 };
 
-export const cppHandler = (graph: TypeGraph<z.infer<typeof zn>>) => {
+export const cppHandler = (
+  graph: TypeGraph<z.infer<typeof zn>>,
+): {
+  user: string;
+  driver: string;
+} => {
   const dependencies = graph.topologicalSort();
 
-  const results = [];
+  const nodeResults = [];
 
   for (const dep of dependencies) {
     const node = graph.getNode(dep)!;
-    results.push(cppHandleNode(node));
+    const handlerResult = cppHandleNode(node);
+    nodeResults.push(handlerResult);
   }
 
-  return results;
+  return produceCode(nodeResults);
 };

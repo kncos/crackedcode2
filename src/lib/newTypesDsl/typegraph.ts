@@ -1,10 +1,12 @@
+import { CrackedError } from "cracked-lib";
+import z from "zod";
 import {
   collectInnerNodes,
   isNonPrimitive,
   isRefNode,
   zn,
   ZN_LIKE,
-  znBase,
+  znEntry,
 } from "./nodes";
 
 export type ExtractTypeGraphType<T> = T extends TypeGraph<infer U> ? U : never;
@@ -114,8 +116,8 @@ export class TypeGraph<NodeT> {
   };
 }
 
-export const parseSchema = (input: ZN_LIKE[]) => {
-  const graph = new TypeGraph<ZN_LIKE>();
+export const parseSchema = (input: ZN_LIKE) => {
+  const graph = new TypeGraph<z.infer<typeof zn>>();
 
   const stack: string[] = [];
   const parseNode = (n: ZN_LIKE) => {
@@ -174,36 +176,16 @@ export const parseSchema = (input: ZN_LIKE[]) => {
     }
   };
 
-  for (const root of input) {
-    const parsedRoot = znBase.safeParse(root);
-    if (!parsedRoot.success) {
-      // console.log(JSON.stringify(root, null, 2));
-      throw new Error(
-        "[PARSE ERROR] Failed to parse root node. is it NodeLike?",
-        {
-          cause: parsedRoot.error,
-        },
-      );
-    }
-
-    if (!parsedRoot.data._name) {
-      throw new Error("[PARSE ERROR] Root node must have a name!");
-    }
-
-    // Parse through the full typed schema so that defaults (e.g. _disallowRoot)
-    // are applied before we inspect the node.
-    const fullyParsed = zn.safeParse(root);
-    if (
-      fullyParsed.success &&
-      (fullyParsed.data as Record<string, unknown>)._disallowRoot
-    ) {
-      throw new Error(
-        "[PARSE ERROR] node with _disallowRoot found as root node.",
-      );
-    }
-
-    parseNode(parsedRoot.data);
+  const parsedRoot = znEntry.safeParse(input);
+  if (!parsedRoot.success) {
+    throw new CrackedError("PARSE_ERROR", {
+      message:
+        "Root node must be a valid 'entry' type node.\n" +
+        z.prettifyError(parsedRoot.error),
+    });
   }
+
+  parseNode(parsedRoot.data);
 
   if (graph.hasCycle()) {
     throw new Error("[PARSE ERROR] Cyclical reference found on schema.");
