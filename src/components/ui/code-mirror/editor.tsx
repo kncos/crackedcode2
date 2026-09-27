@@ -1,3 +1,5 @@
+"use client";
+
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import CodeMirror, {
   EditorView,
@@ -56,6 +58,7 @@ export const EditorProvider = ({
           insert: pendingTextBuf.current,
         },
       });
+
       pendingTextBuf.current = null;
     }
   }, []);
@@ -159,6 +162,7 @@ export const Editor = (props: ReactCodeMirrorProps) => {
       ref={innerRef}
       defaultValue={context?.initialText}
       height={props.height || "100%"}
+      minWidth="480px"
       theme={props.theme || vscodeDark}
       extensions={[...(propExtensions || []), ...extensions]}
       {...rest}

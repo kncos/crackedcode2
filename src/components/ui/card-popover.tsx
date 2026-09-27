@@ -1,25 +1,22 @@
-import * as Popover from '@radix-ui/react-popover';
-import { PropsWithChildren, ReactNode } from 'react';
+import * as Popover from "@radix-ui/react-popover";
+import { PropsWithChildren, ReactElement } from "react";
 
 type CardPopoverProps = PropsWithChildren<{
-  trigger: ReactNode; // usually a <button>
-  align?: Popover.PopoverContentProps['align'];
+  trigger: ReactElement; // usually a <button>
+  align?: Popover.PopoverContentProps["align"];
 }>;
 
+// popover wrapper
 export const CardPopover = ({
   trigger,
-  align = 'start',
+  align = "start",
   children,
 }: CardPopoverProps) => {
   return (
     <Popover.Root>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align={align}>
-          <div className="card bg-base-100 card-border">
-            <div className="card card-body">{children}</div>
-          </div>
-        </Popover.Content>
+        <Popover.Content align={align}>{children}</Popover.Content>
       </Popover.Portal>
     </Popover.Root>
   );

@@ -31,7 +31,7 @@ export const editorConfigToExtensions = (
 ) => {
   // if no input provided, parsing an empty
   // object will just use default values
-  const config = zEditorConfig.parse(input);
+  const config = zEditorConfig.parse(input || {});
 
   // build up extensions array based on config
   const extensions = [];
