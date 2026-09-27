@@ -1,16 +1,11 @@
 "use client";
 
-import {
-  EditorConfigSchema,
-  EditorConfigSchemaType,
-} from "@/components/code-mirror/editor-config";
-import { Selector } from "@/components/selector";
-import { CodeEditor, useCodeEditor, useCodeEditorConfig } from "../code-editor";
+import { Editor, useEditor } from "@/components/ui/code-mirror";
+import { EDITOR_LANGS } from "@/components/ui/code-mirror/editor-config";
+import { Selector } from "@/components/ui/selector";
 
 export function CodeEditorTab() {
-  const { config, setLanguage } = useCodeEditorConfig();
-
-  const ctx = useCodeEditor();
+  const { config, setConfig } = useEditor();
 
   // i added this border because visually it adds some more space after the select caret
   // and seems to perform the illusion pretty well? works on my machine lol
@@ -23,18 +18,16 @@ export function CodeEditorTab() {
         className={`border-base-300 flex h-8 shrink-0 flex-row items-center gap-2 border-b px-2`}
       >
         <Selector
-          onChange={(v) => setLanguage(v as EditorConfigSchemaType["language"])}
+          onChange={(v) => setConfig({ ...config, language: v })}
           value={config.language}
-          possValues={
-            EditorConfigSchema.shape.language.unwrap().unwrap().options
-          }
+          possValues={EDITOR_LANGS}
           classNames={{
             select: selectStyle,
           }}
         />
       </div>
       <div className="h-full min-h-0 w-full flex-1 px-2">
-        <CodeEditor className="h-full w-full" {...ctx} />
+        <Editor className="h-full w-full" />
       </div>
       <div className="border-base-300 flex h-6 shrink-0 flex-row gap-2 border-t px-2">
         status

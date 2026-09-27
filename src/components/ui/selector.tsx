@@ -1,5 +1,5 @@
 type SelectorParams = {
-  possValues: string[];
+  possValues: readonly string[];
   onChange: (input: string) => void;
   classNames?:
     | {

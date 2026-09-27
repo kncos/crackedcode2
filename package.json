@@ -12,6 +12,7 @@
     "@auth/drizzle-adapter": "^1.11.3",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/lang-python": "^6.2.1",
     "@orpc/client": "^2.0.0-beta.37",
