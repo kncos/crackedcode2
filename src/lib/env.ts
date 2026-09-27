@@ -1,6 +1,4 @@
 // import { zRedisConfig } from "cracked-judge/src/types";
-import "server-only";
-
 import "dotenv/config";
 import z from "zod";
 

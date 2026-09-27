@@ -1,5 +1,6 @@
+import { db } from "@/db";
 import { users } from "@/db/schema";
-import { db } from "@/lib/db";
+
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import NextAuth from "next-auth";

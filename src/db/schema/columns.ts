@@ -8,7 +8,7 @@ export const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .defaultNow()
     .notNull(),
-  udpatedAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
