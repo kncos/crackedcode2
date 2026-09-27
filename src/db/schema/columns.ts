@@ -1,7 +1,7 @@
 import { timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const idColumn = {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
 };
 
 export const timestamps = {

@@ -1,26 +1,8 @@
-import { znEntry } from "@/lib/newTypesDsl/nodes";
 import { JudgeStatus, zJob, zJobResult } from "cracked-judge";
-import {
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  uuid,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import z from "zod";
 import { idColumn, timestamps } from "./columns";
-
-export const problems = pgTable("problems", {
-  ...idColumn,
-  ...timestamps,
-  title: varchar("title", { length: 120 }).notNull(),
-  description: text("description"),
-  editorial: text("editorial"),
-  difficulty: integer("difficulty"),
-  categories: text("categories").array().notNull().default([]),
-  abi: jsonb("abi").$type<z.infer<typeof znEntry>>(),
-});
+import { problems } from "./problems";
 
 export const submissions = pgTable("submission", {
   ...idColumn,

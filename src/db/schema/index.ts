@@ -1,2 +1,3 @@
 export * from "./auth";
-export * from "./problem";
+export * from "./problems";
+export * from "./submissions";
