@@ -1,5 +1,5 @@
 import { zJsonFile } from "@/lib/types";
-import { EditorState } from "@uiw/react-codemirror";
+import { EditorSelection, Text } from "@uiw/react-codemirror";
 import {
   createContext,
   Dispatch,
@@ -7,14 +7,11 @@ import {
   SetStateAction,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
+  useReducer,
   useState,
 } from "react";
 import z from "zod";
-import { useEditorConfig } from "./editor-config";
-import { fileExtToLangExt } from "./langs";
 
 export const FILE_EXTENSIONS = [
   "cpp",
@@ -33,121 +30,156 @@ export const splitFileExt = (fileName: string): [string, string] => {
   return [name, extension];
 };
 
+/**
+ * Everything we keep per file. All of these are immutable values, so storing
+ * them is just holding pointers. No extensions, no React state.
+ */
+export type FileSnapshot = {
+  doc: Text;
+  selection?: EditorSelection;
+  // opaque value of CodeMirror's historyField (typed `unknown` upstream)
+  history?: unknown;
+};
+type FileEntry = FileSnapshot & { revision: number };
+
 type FileName = string | null;
+type JsonFile = z.infer<typeof zJsonFile>;
+
 export type EditorFilesystemCtxType = {
-  // state
   currentFile: FileName;
   fileNames: string[];
   setCurrentFile: Dispatch<SetStateAction<FileName>>;
 
-  writeState: (name: string, state: EditorState | null) => void;
-  readState: (name: FileName) => EditorState | null;
+  // used by the editor. Saving never triggers a React re-render.
+  getSnapshot: (name: string) => FileSnapshot | null;
+  saveSnapshot: (name: string, snapshot: FileSnapshot) => void;
+  // bumps whenever a file is replaced from outside the editor
+  getRevision: (name: string) => number;
 
-  writeSerialized: (file: z.infer<typeof zJsonFile>) => void;
-  readSerialized: (name: FileName) => z.infer<typeof zJsonFile> | null;
-
+  // external API. Replaces contents and clears history.
+  writeSerialized: (file: JsonFile) => void;
+  readSerialized: (name: FileName) => JsonFile | null;
   resetFile: (name: string) => void;
+  deleteFile: (name: string) => void;
 };
 
 const EditorFilesystemCtx = createContext<EditorFilesystemCtxType | null>(null);
 
 export type EditorFilesystemProviderProps = {
-  defaultFiles?: z.infer<typeof zJsonFile>[];
+  defaultFiles?: JsonFile[];
 } & PropsWithChildren;
+
+const toDoc = (contents: string) => Text.of(contents.split(/\r?\n/));
 
 export function EditorFilesystemProvider(props: EditorFilesystemProviderProps) {
   const { children, defaultFiles = [] } = props;
 
-  const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [currentFile, setCurrentFile] = useState<FileName>(null);
+  const [fileNames, setFileNames] = useState<string[]>(() =>
+    defaultFiles.map((f) => f.name),
+  );
 
-  const [fileNames, setFileNames] = useState<string[]>([]);
-  const stateMapRef = useRef<Map<string, EditorState>>(new Map());
-
-  const { extensions } = useEditorConfig();
-
-  const writeState = useCallback((name: string, state: EditorState | null) => {
-    if (state !== null) {
-      stateMapRef.current.set(name, state);
-      setFileNames((prev) => (prev.includes(name) ? prev : [...prev, name]));
-    } else {
-      stateMapRef.current.delete(name);
-      setFileNames((prev) => prev.filter((n) => n !== name));
+  // Stable, mutable map created once. Seeded synchronously, so there is no
+  // "effect runs after first render" gap. Defaults are only applied once;
+  // later changes to defaultFiles don't reset anything.
+  const [files] = useState(() => {
+    const map = new Map<string, FileEntry>();
+    for (const f of defaultFiles) {
+      map.set(f.name, { doc: toDoc(f.contents), revision: 0 });
     }
-  }, []);
+    return map;
+  });
 
-  const readState = useCallback(
-    (name: string | null) =>
-      (name ? stateMapRef.current.get(name) : null) ?? null,
-    [],
+  // Only used to make context consumers re-render after an external write.
+  const [version, bump] = useReducer((n: number) => n + 1, 0);
+
+  const getSnapshot = useCallback(
+    (name: string) => files.get(name) ?? null,
+    [files],
+  );
+
+  const getRevision = useCallback(
+    (name: string) => files.get(name)?.revision ?? 0,
+    [files],
+  );
+
+  const saveSnapshot = useCallback(
+    (name: string, snapshot: FileSnapshot) => {
+      const prev = files.get(name);
+      if (!prev) return; // file was deleted while the editor was mounted
+      files.set(name, { ...snapshot, revision: prev.revision });
+    },
+    [files],
   );
 
   const writeSerialized = useCallback(
-    (file: z.infer<typeof zJsonFile>) => {
-      const [_, ext] = splitFileExt(file.name);
-      const langExt = fileExtToLangExt(ext);
-      const state = EditorState.create({
-        doc: file.contents,
-        extensions: langExt ? [...extensions, langExt] : [...extensions],
+    (file: JsonFile) => {
+      const prev = files.get(file.name);
+      files.set(file.name, {
+        doc: toDoc(file.contents),
+        revision: (prev?.revision ?? 0) + 1,
       });
-      writeState(file.name, state);
+      setFileNames((names) =>
+        names.includes(file.name) ? names : [...names, file.name],
+      );
+      bump();
     },
-    [extensions, writeState],
+    [files],
   );
 
-  const readSerialized = useCallback((name: string | null) => {
-    if (name == null) return null;
-
-    const state = stateMapRef.current.get(name);
-    if (!state) {
-      return null;
-    }
-    return {
-      name,
-      contents: state.doc.toString(),
-    };
-  }, []);
+  const readSerialized = useCallback(
+    (name: FileName) => {
+      if (name == null) return null;
+      const entry = files.get(name);
+      if (!entry) return null;
+      return { name, contents: entry.doc.toString() };
+    },
+    [files],
+  );
 
   const resetFile = useCallback(
     (name: string) => {
-      const defaultIdx = defaultFiles.findIndex((df) => df.name === name);
-      const file =
-        defaultIdx === -1 ? { name, contents: "" } : defaultFiles[defaultIdx];
-
-      writeSerialized(file);
+      const def = defaultFiles.find((df) => df.name === name);
+      writeSerialized(def ?? { name, contents: "" });
     },
     [defaultFiles, writeSerialized],
   );
 
-  // only once on creation, if defaultFiles is updated afterwards,
-  // we don't want to reset files automatically
-  useEffect(() => {
-    console.log(
-      "Default files: ",
-      defaultFiles.map((d) => d.name),
-    );
-    defaultFiles.map(writeSerialized);
-  }, []);
+  const deleteFile = useCallback(
+    (name: string) => {
+      files.delete(name);
+      setFileNames((names) => names.filter((n) => n !== name));
+      setCurrentFile((cur) => (cur === name ? null : cur));
+    },
+    [files],
+  );
 
   const value = useMemo(
     () => ({
       currentFile,
       setCurrentFile,
       fileNames,
-      writeState,
-      readState,
+      getSnapshot,
+      saveSnapshot,
+      getRevision,
       writeSerialized,
       readSerialized,
       resetFile,
+      deleteFile,
     }),
+    // `version` forces a new context value after external writes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       currentFile,
-      setCurrentFile,
       fileNames,
-      writeState,
-      readState,
+      version,
+      getSnapshot,
+      saveSnapshot,
+      getRevision,
       writeSerialized,
       readSerialized,
       resetFile,
+      deleteFile,
     ],
   );
 

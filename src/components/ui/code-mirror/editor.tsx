@@ -1,11 +1,12 @@
 "use client";
 
-import { vscodeDark } from "@uiw/codemirror-theme-vscode";
+import { historyField } from "@codemirror/commands";
 import CodeMirror, {
+  Extension,
   ReactCodeMirrorProps,
-  ReactCodeMirrorRef,
+  ViewUpdate,
 } from "@uiw/react-codemirror";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import {
   EditorConfigProvider,
   EditorConfigProviderProps,
@@ -14,8 +15,10 @@ import {
 import {
   EditorFilesystemProvider,
   EditorFilesystemProviderProps,
+  splitFileExt,
   useEditorFilesystem,
 } from "./editor-filesys";
+import { fileExtToLangExt } from "./langs";
 
 export function EditorProvider(
   props: EditorConfigProviderProps & EditorFilesystemProviderProps,
@@ -28,11 +31,6 @@ export function EditorProvider(
   );
 }
 
-// note: there are some issues here where we can basically call some function
-// on the filesystem API and then it has a race condition with state updates
-// from the editor itself. That's because state only gets set from the
-// map when the useEffect runs due to the files changing, so if something
-// else changes the state, it is immediately overwritten and lost by the editor
 export const useEditor = () => {
   const { config, setConfig } = useEditorConfig();
   const {
@@ -41,6 +39,8 @@ export const useEditor = () => {
     setCurrentFile,
     writeSerialized,
     readSerialized,
+    resetFile,
+    deleteFile,
   } = useEditorFilesystem();
 
   return {
@@ -51,44 +51,89 @@ export const useEditor = () => {
     setCurrentFile,
     writeSerialized,
     readSerialized,
+    resetFile,
+    deleteFile,
   };
 };
 
 export const Editor = (props: ReactCodeMirrorProps) => {
-  const { extensions: propExtensions, ...rest } = props;
+  const {
+    extensions: propExtensions,
+    height = "100%",
+    onUpdate: propOnUpdate,
+    ...rest
+  } = props;
 
-  const { currentFile, readState, writeState } = useEditorFilesystem();
+  const { currentFile, getSnapshot, saveSnapshot, getRevision } =
+    useEditorFilesystem();
   const { extensions: baseExtensions } = useEditorConfig();
+
+  // Changes when the user switches files, or when a file is replaced from
+  // outside the editor (writeSerialized / resetFile).
+  const revision = currentFile ? getRevision(currentFile) : 0;
+  const editorKey = `${currentFile ?? "<none>"}#${revision}`;
+
+  // Read once per mount. Later edits mutate the map but must not change this,
+  // otherwise `value` would churn.
+  const snapshot = useMemo(
+    () => (currentFile ? getSnapshot(currentFile) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editorKey, getSnapshot],
+  );
+  const initialDoc = useMemo(() => snapshot?.doc.toString() ?? "", [snapshot]);
+
+  const langExt = useMemo(
+    () => (currentFile ? fileExtToLangExt(splitFileExt(currentFile)[1]) : null),
+    [currentFile],
+  );
+
+  // Seeds the history field on creation. Reconfigures (e.g. config form
+  // changes) keep the live field value, so this only matters at mount.
+  const historyExt = useMemo(
+    () =>
+      snapshot?.history !== undefined
+        ? historyField.init(() => snapshot.history)
+        : null,
+    [snapshot],
+  );
+
   const extensions = useMemo(() => {
-    return [...baseExtensions, ...(propExtensions || [])];
-  }, [baseExtensions, propExtensions]);
+    const all: Extension[] = [...baseExtensions];
+    if (langExt) all.push(langExt);
+    if (historyExt) all.push(historyExt);
+    if (propExtensions) all.push(...propExtensions);
+    return all;
+  }, [baseExtensions, langExt, historyExt, propExtensions]);
 
-  const ref = useRef<ReactCodeMirrorRef>(null);
+  // Save pointers on every real transaction (doc, selection, history).
+  // No React state is touched.
+  const onUpdate = useCallback(
+    (vu: ViewUpdate) => {
+      if (currentFile && vu.transactions.length > 0) {
+        saveSnapshot(currentFile, {
+          doc: vu.state.doc,
+          selection: vu.state.selection,
+          history: vu.state.field(historyField, false),
+        });
+      }
+      propOnUpdate?.(vu);
+    },
+    [currentFile, saveSnapshot, propOnUpdate],
+  );
 
-  useEffect(() => {
-    const state = readState(currentFile);
-    console.log("useEffect ran in editor");
-    if (state) {
-      console.log("state was present");
-      ref.current?.view?.setState(state);
-    }
-  }, [currentFile]);
-
-  const updateHook = useCallback(() => {
-    if (currentFile && ref.current?.view?.state) {
-      writeState(currentFile, ref.current.view.state);
-    }
-  }, [currentFile, writeState]);
-
-  // the ref gets a reference to the internal editor state/view/etc.
   return (
     <CodeMirror
-      ref={ref}
-      height={props.height || "100%"}
+      key={editorKey}
+      height={height}
       minWidth="480px"
-      theme={vscodeDark}
-      onChange={updateHook}
-      initialState={}
+      // the theme lives in `extensions`, so turn off the wrapper's default
+      // "light" theme, which would otherwise win on precedence
+      theme="none"
+      value={initialDoc}
+      selection={snapshot?.selection}
+      editable={currentFile !== null}
+      extensions={extensions}
+      onUpdate={onUpdate}
       {...rest}
     />
   );
