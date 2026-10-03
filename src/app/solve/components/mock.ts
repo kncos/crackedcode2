@@ -24,4 +24,14 @@ export const mockProblem = {
     "very nested",
   title: "some problem",
   id: "id-xyz",
+  userFiles: [
+    {
+      name: "solution.cpp",
+      contents: "int64_t someProblem(int64_t a, int64_t b) {\n\n}\n",
+    },
+    {
+      name: "solution.py",
+      contents: "def someProblem(a, b):\n  pass\n",
+    },
+  ],
 } satisfies Awaited<ReturnType<typeof client.problems.findOne>>;

@@ -1,5 +1,6 @@
 "use client";
 
+import { SetStateType, zJsonFile } from "@/lib/types";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import CodeMirror, {
   EditorView,
@@ -8,6 +9,7 @@ import CodeMirror, {
 } from "@uiw/react-codemirror";
 import {
   createContext,
+  PropsWithChildren,
   useCallback,
   useContext,
   useEffect,
@@ -23,27 +25,33 @@ export interface EditorContextValue {
   getText: () => string;
   setText: (newText: string) => void;
   config: z.infer<typeof zEditorConfig>;
-  setConfig: (
-    input:
-      | z.input<typeof zEditorConfig>
-      | (() => z.input<typeof zEditorConfig>),
-  ) => void;
+  setConfig: SetStateType<typeof zEditorConfig>;
   extensions: ReturnType<typeof editorConfigToExtensions>;
-
   _registerView: (view: EditorView | null) => void;
 }
 
 const editorCtx = createContext<EditorContextValue | null>(null);
 
-export const EditorProvider = ({
-  children,
-  initialConfig = {},
-  initialText = "",
-}: {
-  children: React.ReactNode;
+type EditorProviderProps = {
   initialConfig?: z.input<typeof zEditorConfig>;
-  initialText?: string;
-}) => {
+  initialFiles?: z.infer<typeof zJsonFile>[];
+} & PropsWithChildren;
+
+type EditorContext = {
+  // editor's config
+  config: z.infer<typeof zEditorConfig>;
+  setConfig: SetStateType<z.infer<typeof zEditorConfig>>;
+  // initial serialized files
+  initialFiles?: z.infer<typeof zJsonFile>[];
+  fileNames: Set<string>;
+  // given a file name, returns the serialized file or null if non-existant
+  getFile: (fileName: string) => z.infer<typeof zJsonFile> | null;
+  setFile: (file: z.infer<typeof zJsonFile>) => void;
+  deleteFile: (fileName: string) => void;
+  resetFile: (fileName: string) => void;
+};
+
+export const EditorProvider = (props: EditorProviderProps) => {
   const pendingTextBuf = useRef<string | null>(null);
 
   // hoisted from a CodeMirror component somewhere in the tree

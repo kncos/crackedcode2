@@ -1,7 +1,6 @@
 import z from "zod";
 import { Selector } from "../selector";
-import { useEditor } from "./editor";
-import { EDITOR_LANGS, zEditorConfig } from "./editor-config";
+import { EDITOR_LANGS, useEditorConfig, zEditorConfig } from "./editor-config";
 
 interface EditorConfigFormProps {
   className?: string;
@@ -9,7 +8,7 @@ interface EditorConfigFormProps {
 
 export const EditorConfigForm = (props: EditorConfigFormProps) => {
   const { className } = props;
-  const { config, setConfig } = useEditor();
+  const { config, setConfig } = useEditorConfig();
 
   return (
     <div className="card card-border border-base-200 bg-neutral shadow-md">

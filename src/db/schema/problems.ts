@@ -1,4 +1,5 @@
 import { znEntry } from "@/lib/newTypesDsl/nodes";
+import { zJsonFile } from "@/lib/types";
 import { integer, jsonb, pgTable, text, varchar } from "drizzle-orm/pg-core";
 import z from "zod";
 import { idColumn, timestamps } from "./columns";
@@ -13,6 +14,7 @@ export const problems = pgTable("problems", {
   categories: text("categories").array().notNull().default([]),
   abi: jsonb("abi").$type<z.infer<typeof znEntry>>(),
   testCases: jsonb("test_cases"),
+  userFiles: jsonb("user_files").$type<z.infer<typeof zJsonFile>[]>(),
 });
 
 export const problemListItemSelect = {
@@ -28,4 +30,5 @@ export const problemDetailSelect = {
   ...problemListItemSelect,
   description: problems.description,
   editorial: problems.editorial,
+  userFiles: problems.userFiles,
 } as const;
