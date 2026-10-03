@@ -1,10 +1,5 @@
 "use client";
 
-import { cpp } from "@codemirror/lang-cpp";
-import { javascript } from "@codemirror/lang-javascript";
-import { json } from "@codemirror/lang-json";
-import { markdown } from "@codemirror/lang-markdown";
-import { python } from "@codemirror/lang-python";
 import { vim } from "@replit/codemirror-vim";
 import { EditorView } from "@uiw/react-codemirror";
 import {
@@ -18,34 +13,14 @@ import {
 } from "react";
 import z from "zod";
 
-export const EDITOR_LANGS = [
-  "Markdown",
-  "Python",
-  "JavaScript",
-  "C++",
-  "Json",
-] as const;
-
-export type EditorLang = (typeof EDITOR_LANGS)[number];
-
-export const EDITOR_LANG_EXT_MAP = {
-  Markdown: ["md"] as const,
-  Python: ["py"] as const,
-  JavaScript: ["js"] as const,
-  "C++": ["cpp", "hpp"] as const,
-  Json: ["json"] as const,
-} as const satisfies Record<EditorLang, string[]>;
-export type EditorLangExtMap = typeof EDITOR_LANG_EXT_MAP;
-
 export const zEditorConfig = z.object({
-  language: z.string().optional().default("Python"),
   keyBindings: z.enum(["default", "vim"]).optional().default("default"),
   fontSizePx: z.number().min(6).max(36).optional().default(16),
   lineWrap: z.boolean().optional().default(false),
 });
 
 const useEditorExtensions = (input: z.infer<typeof zEditorConfig>) => {
-  const { fontSizePx, language, keyBindings, lineWrap } = input;
+  const { fontSizePx, keyBindings, lineWrap } = input;
 
   const extTheme = useMemo(
     () =>
@@ -62,37 +37,23 @@ const useEditorExtensions = (input: z.infer<typeof zEditorConfig>) => {
     [lineWrap],
   );
 
-  const extLanguage = useMemo(() => {
-    switch (language as EditorLang) {
-      case "Python":
-        return python();
-      case "Markdown":
-        return markdown();
-      case "JavaScript":
-        return javascript();
-      case "C++":
-        return cpp();
-      case "Json":
-        return json();
-      default:
-        return undefined;
-    }
-  }, [language]);
-
   const extVim = useMemo(
     () => (keyBindings === "vim" ? vim() : undefined),
     [keyBindings],
   );
 
-  const extensions = useMemo(
-    () => [extTheme, extLineWrap, extLanguage, extVim],
-    [extTheme, extLineWrap, extLanguage, extVim],
-  );
+  const extensions = useMemo(() => {
+    const e = [];
+    if (extTheme) e.push(extTheme);
+    if (extLineWrap) e.push(extLineWrap);
+    if (extVim) e.push(extVim);
+    return e;
+  }, [extTheme, extLineWrap, extVim]);
 
   return extensions;
 };
 
-type EditorConfigCtxType = {
+export type EditorConfigCtxType = {
   config: z.infer<typeof zEditorConfig>;
   extensions: ReturnType<typeof useEditorExtensions>;
   setConfig: Dispatch<SetStateAction<z.input<typeof zEditorConfig>>>;
@@ -100,7 +61,7 @@ type EditorConfigCtxType = {
 
 const EditorConfigCtx = createContext<EditorConfigCtxType | null>(null);
 
-type EditorConfigProviderProps = {
+export type EditorConfigProviderProps = {
   initialConfig?: z.input<typeof zEditorConfig>;
 } & PropsWithChildren;
 

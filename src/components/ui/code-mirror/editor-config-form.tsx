@@ -1,6 +1,4 @@
-import z from "zod";
-import { Selector } from "../selector";
-import { EDITOR_LANGS, useEditorConfig, zEditorConfig } from "./editor-config";
+import { useEditorConfig } from "./editor-config";
 
 interface EditorConfigFormProps {
   className?: string;
@@ -17,22 +15,6 @@ export const EditorConfigForm = (props: EditorConfigFormProps) => {
         <div
           className={`card-actions grid grid-cols-2 grid-rows-5 items-center gap-2`}
         >
-          <label className="label">
-            <span className="label-text">Language</span>
-          </label>
-          <Selector
-            classNames={{
-              select: "select select-sm justify-self-end",
-            }}
-            value={config.language}
-            onChange={(v) =>
-              setConfig({
-                ...config,
-                language: v as z.infer<typeof zEditorConfig>["language"],
-              })
-            }
-            possValues={EDITOR_LANGS}
-          />
           <label className="label">
             <span className="label-text">Font Size</span>
           </label>
