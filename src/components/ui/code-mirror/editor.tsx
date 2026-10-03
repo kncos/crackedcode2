@@ -5,14 +5,7 @@ import CodeMirror, {
   ReactCodeMirrorProps,
   ReactCodeMirrorRef,
 } from "@uiw/react-codemirror";
-import { Prettify } from "cracked-lib";
-import {
-  createContext,
-  PropsWithChildren,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   EditorConfigProvider,
   EditorConfigProviderProps,
@@ -24,19 +17,16 @@ import {
   useEditorFilesystem,
 } from "./editor-filesys";
 
-const EditorCtx = createContext(null);
-
-export type EditorProvierProps = Prettify<
-  EditorConfigProviderProps & EditorFilesystemProviderProps & PropsWithChildren
->;
-export const EditorProvider = (props: EditorProvierProps) => {
+export function EditorProvider(
+  props: EditorConfigProviderProps & EditorFilesystemProviderProps,
+) {
   const { children } = props;
   return (
     <EditorConfigProvider {...props}>
       <EditorFilesystemProvider {...props}>{children}</EditorFilesystemProvider>
     </EditorConfigProvider>
   );
-};
+}
 
 // note: there are some issues here where we can basically call some function
 // on the filesystem API and then it has a race condition with state updates
@@ -45,42 +35,60 @@ export const EditorProvider = (props: EditorProvierProps) => {
 // else changes the state, it is immediately overwritten and lost by the editor
 export const useEditor = () => {
   const { config, setConfig } = useEditorConfig();
-  const { currentFile, getFileNames, setCurrentFile, serializeFile } =
-    useEditorFilesystem();
+  const {
+    currentFile,
+    fileNames,
+    setCurrentFile,
+    writeSerialized,
+    readSerialized,
+  } = useEditorFilesystem();
+
+  return {
+    config,
+    setConfig,
+    currentFile,
+    fileNames,
+    setCurrentFile,
+    writeSerialized,
+    readSerialized,
+  };
 };
 
 export const Editor = (props: ReactCodeMirrorProps) => {
   const { extensions: propExtensions, ...rest } = props;
 
-  const { currentFile, getState, setState, editorOnUpdateHook } =
-    useEditorFilesystem();
+  const { currentFile, readState, writeState } = useEditorFilesystem();
   const { extensions: baseExtensions } = useEditorConfig();
   const extensions = useMemo(() => {
     return [...baseExtensions, ...(propExtensions || [])];
   }, [baseExtensions, propExtensions]);
 
-  const innerRef = useRef<ReactCodeMirrorRef>(null);
+  const ref = useRef<ReactCodeMirrorRef>(null);
 
   useEffect(() => {
-    const state = getState(currentFile);
+    const state = readState(currentFile);
+    console.log("useEffect ran in editor");
     if (state) {
-      innerRef.current?.view?.setState(state);
-    } else if (innerRef.current?.state) {
-      setState(currentFile, innerRef.current.state);
-    } else {
-      throw new Error("Something went wrong with code editor filesystem state");
+      console.log("state was present");
+      ref.current?.view?.setState(state);
     }
   }, [currentFile]);
+
+  const updateHook = useCallback(() => {
+    if (currentFile && ref.current?.view?.state) {
+      writeState(currentFile, ref.current.view.state);
+    }
+  }, [currentFile, writeState]);
 
   // the ref gets a reference to the internal editor state/view/etc.
   return (
     <CodeMirror
-      ref={innerRef}
+      ref={ref}
       height={props.height || "100%"}
       minWidth="480px"
-      theme={props.theme || vscodeDark}
-      extensions={extensions}
-      onUpdate={editorOnUpdateHook}
+      theme={vscodeDark}
+      onChange={updateHook}
+      initialState={}
       {...rest}
     />
   );

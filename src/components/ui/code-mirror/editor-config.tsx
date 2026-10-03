@@ -1,6 +1,7 @@
 "use client";
 
 import { vim } from "@replit/codemirror-vim";
+import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import { EditorView } from "@uiw/react-codemirror";
 import {
   createContext,
@@ -43,12 +44,12 @@ const useEditorExtensions = (input: z.infer<typeof zEditorConfig>) => {
   );
 
   const extensions = useMemo(() => {
-    const e = [];
+    const e = [vscodeDark];
     if (extTheme) e.push(extTheme);
     if (extLineWrap) e.push(extLineWrap);
     if (extVim) e.push(extVim);
     return e;
-  }, [extTheme, extLineWrap, extVim]);
+  }, [vscodeDark, extTheme, extLineWrap, extVim]);
 
   return extensions;
 };

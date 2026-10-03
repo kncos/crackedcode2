@@ -2,6 +2,7 @@ import { EditorProvider } from "@/components/ui/code-mirror";
 import { router } from "@/server/root";
 import { call } from "@orpc/server";
 import { ProblemMain } from "./components/main";
+import { mockProblem } from "./components/mock";
 
 const submitAction = async (code: string) => {
   "use server";
@@ -23,7 +24,7 @@ const submitAction = async (code: string) => {
 
 export default async function FooPage() {
   return (
-    <EditorProvider>
+    <EditorProvider defaultFiles={[...mockProblem.userFiles]}>
       <ProblemMain submitAction={submitAction} />
     </EditorProvider>
   );

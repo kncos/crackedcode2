@@ -1,8 +1,4 @@
 import { EditorProvider, useEditor } from "@/components/ui/code-mirror";
-import {
-  EDITOR_LANG_EXT_MAP,
-  EditorLang,
-} from "@/components/ui/code-mirror/editor-config";
 import { client } from "@/lib/orpc";
 import { createContext, PropsWithChildren, useContext } from "react";
 
@@ -46,7 +42,7 @@ export const useSolve = () => {
     throw new Error("useSolve must be used within a SolveProvider");
   }
 
-  const { getText, setText, config, setConfig } = useEditor();
+  const { getText, setText, config, setConfig, fileNames } = useEditor();
 
   const setLang = (lang: EditorLang) => {
     // no-op

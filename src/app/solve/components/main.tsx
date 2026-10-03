@@ -11,18 +11,29 @@ export const ProblemMain = (props: {
   submitAction: (input: string) => any;
 }) => {
   const { submitAction } = props;
-  const { getText } = useEditor();
+  const { readSerialized, currentFile, fileNames } = useEditor();
 
   const doSubmit = useCallback(async () => {
-    const text = getText();
-    return await submitAction(text);
-  }, [getText, submitAction]);
+    const serialized = readSerialized(currentFile);
+    if (!serialized) {
+      return;
+    }
+
+    return await submitAction(serialized.contents);
+  }, [submitAction, readSerialized, currentFile]);
+
+  const doRun = useCallback(() => {
+    console.log("CURRENT FILENAMES: ", fileNames);
+    console.log("Current File: ", currentFile);
+  }, [fileNames, currentFile]);
 
   return (
     <div className="w-full h-screen flex flex-col">
       <NavBar>
         <NavBar.Middle>
-          <button className="btn btn-sm btn-primary">Run</button>
+          <button className="btn btn-sm btn-primary" onClick={doRun}>
+            Run
+          </button>
           <button onClick={doSubmit} className="btn btn-sm btn-accent">
             Submit
           </button>

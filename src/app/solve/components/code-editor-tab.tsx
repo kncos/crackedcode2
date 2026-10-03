@@ -6,13 +6,13 @@ import {
   EditorConfigForm,
   useEditor,
 } from "@/components/ui/code-mirror";
-import { EDITOR_LANGS } from "@/components/ui/code-mirror/editor-config";
 import { Selector } from "@/components/ui/selector";
 import { useRef } from "react";
 import { Card } from "./card";
 
 export function CodeEditorTab() {
-  const { config, setConfig } = useEditor();
+  const { config, setConfig, currentFile, fileNames, setCurrentFile } =
+    useEditor();
 
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -20,11 +20,11 @@ export function CodeEditorTab() {
     <Card>
       <div className={`card-actions shrink-0`}>
         <Selector
-          onChange={(v) => setConfig({ ...config, language: v })}
-          value={config.language}
-          possValues={EDITOR_LANGS}
+          onChange={(v) => setCurrentFile(v)}
+          value={currentFile ?? "None"}
+          possValues={[...fileNames]}
           classNames={{
-            select: "select select-xs select-primary w-24",
+            select: "select select-xs select-primary",
           }}
         />
         <CardPopover

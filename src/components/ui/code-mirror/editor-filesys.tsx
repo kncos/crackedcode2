@@ -1,5 +1,5 @@
 import { zJsonFile } from "@/lib/types";
-import { EditorState, ViewUpdate } from "@uiw/react-codemirror";
+import { EditorState } from "@uiw/react-codemirror";
 import {
   createContext,
   Dispatch,
@@ -33,21 +33,20 @@ export const splitFileExt = (fileName: string): [string, string] => {
   return [name, extension];
 };
 
+type FileName = string | null;
 export type EditorFilesystemCtxType = {
   // state
-  currentFile: string;
-  getFileNames: () => string[];
-  setCurrentFile: Dispatch<SetStateAction<string>>;
+  currentFile: FileName;
+  fileNames: string[];
+  setCurrentFile: Dispatch<SetStateAction<FileName>>;
 
-  getState: (name: string) => EditorState | null;
-  setState: (name: string, state: EditorState) => void;
-  // operations
-  serializeFile: (name: string) => z.infer<typeof zJsonFile> | null;
-  deserializeFile: (file: z.infer<typeof zJsonFile>) => void;
+  writeState: (name: string, state: EditorState | null) => void;
+  readState: (name: FileName) => EditorState | null;
+
+  writeSerialized: (file: z.infer<typeof zJsonFile>) => void;
+  readSerialized: (name: FileName) => z.infer<typeof zJsonFile> | null;
+
   resetFile: (name: string) => void;
-  deleteFile: (name: string) => void;
-  // hook to make this function
-  editorOnUpdateHook: (viewUpdate: ViewUpdate) => void;
 };
 
 const EditorFilesystemCtx = createContext<EditorFilesystemCtxType | null>(null);
@@ -59,13 +58,30 @@ export type EditorFilesystemProviderProps = {
 export function EditorFilesystemProvider(props: EditorFilesystemProviderProps) {
   const { children, defaultFiles = [] } = props;
 
-  const [currentFile, setCurrentFile] = useState<string>("untitled");
+  const [currentFile, setCurrentFile] = useState<string | null>(null);
+
+  const [fileNames, setFileNames] = useState<string[]>([]);
   const stateMapRef = useRef<Map<string, EditorState>>(new Map());
-  const dirtyRef = useRef<Set<string>>(new Set());
 
   const { extensions } = useEditorConfig();
 
-  const deserializeFile = useCallback(
+  const writeState = useCallback((name: string, state: EditorState | null) => {
+    if (state !== null) {
+      stateMapRef.current.set(name, state);
+      setFileNames((prev) => (prev.includes(name) ? prev : [...prev, name]));
+    } else {
+      stateMapRef.current.delete(name);
+      setFileNames((prev) => prev.filter((n) => n !== name));
+    }
+  }, []);
+
+  const readState = useCallback(
+    (name: string | null) =>
+      (name ? stateMapRef.current.get(name) : null) ?? null,
+    [],
+  );
+
+  const writeSerialized = useCallback(
     (file: z.infer<typeof zJsonFile>) => {
       const [_, ext] = splitFileExt(file.name);
       const langExt = fileExtToLangExt(ext);
@@ -73,12 +89,14 @@ export function EditorFilesystemProvider(props: EditorFilesystemProviderProps) {
         doc: file.contents,
         extensions: langExt ? [...extensions, langExt] : [...extensions],
       });
-      stateMapRef.current.set(file.name, state);
+      writeState(file.name, state);
     },
-    [extensions],
+    [extensions, writeState],
   );
 
-  const serializeFile = useCallback((name: string) => {
+  const readSerialized = useCallback((name: string | null) => {
+    if (name == null) return null;
+
     const state = stateMapRef.current.get(name);
     if (!state) {
       return null;
@@ -92,59 +110,45 @@ export function EditorFilesystemProvider(props: EditorFilesystemProviderProps) {
   const resetFile = useCallback(
     (name: string) => {
       const defaultIdx = defaultFiles.findIndex((df) => df.name === name);
-      if (defaultIdx !== -1) {
-        deserializeFile(defaultFiles[defaultIdx]);
-      } else {
-        deserializeFile({ name, contents: "" });
-      }
+      const file =
+        defaultIdx === -1 ? { name, contents: "" } : defaultFiles[defaultIdx];
+
+      writeSerialized(file);
     },
-    [defaultFiles],
+    [defaultFiles, writeSerialized],
   );
-
-  const deleteFile = useCallback((name: string) => {
-    stateMapRef.current.delete(name);
-    dirtyRef.current.delete(name);
-  }, []);
-
-  const editorOnUpdateHook = useCallback((vu: ViewUpdate) => {
-    stateMapRef.current.set(currentFile, vu.state);
-  }, []);
-
-  const getFileNames = useCallback(() => {
-    return stateMapRef.current.keys().toArray();
-  }, []);
-
-  const getState = useCallback((name: string) => {
-    return stateMapRef.current.get(name) ?? null;
-  }, []);
-
-  const setState = useCallback((name: string, state: EditorState) => {
-    stateMapRef.current.set(name, state);
-  }, []);
 
   // only once on creation, if defaultFiles is updated afterwards,
   // we don't want to reset files automatically
   useEffect(() => {
-    defaultFiles.forEach(deserializeFile);
-    if (defaultFiles.length !== 0) {
-      setCurrentFile(defaultFiles[0].name);
-    }
+    console.log(
+      "Default files: ",
+      defaultFiles.map((d) => d.name),
+    );
+    defaultFiles.map(writeSerialized);
   }, []);
 
   const value = useMemo(
     () => ({
-      serializeFile,
-      deserializeFile,
-      resetFile,
-      deleteFile,
-      editorOnUpdateHook,
       currentFile,
       setCurrentFile,
-      getFileNames,
-      getState,
-      setState,
+      fileNames,
+      writeState,
+      readState,
+      writeSerialized,
+      readSerialized,
+      resetFile,
     }),
-    [serializeFile, deserializeFile, resetFile, deleteFile],
+    [
+      currentFile,
+      setCurrentFile,
+      fileNames,
+      writeState,
+      readState,
+      writeSerialized,
+      readSerialized,
+      resetFile,
+    ],
   );
 
   return (
