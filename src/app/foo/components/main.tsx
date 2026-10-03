@@ -3,6 +3,8 @@
 import { useEditor } from "@/components/ui/code-mirror";
 import { useCallback } from "react";
 import { CodeEditorTab } from "./code-editor-tab";
+import { mockProblem } from "./mock";
+import { ProblemTab } from "./problem-tab";
 
 export const ProblemMain = (props: {
   submitAction: (input: string) => any;
@@ -33,7 +35,8 @@ export const ProblemMain = (props: {
           <button className="btn btn-sm">?</button>
         </div>
       </div>
-      <div className="p-4 gap-4 h-full">
+      <div className="p-4 gap-4 h-full grid grid-cols-2">
+        <ProblemTab problemData={mockProblem} />
         <CodeEditorTab />
       </div>
     </div>
